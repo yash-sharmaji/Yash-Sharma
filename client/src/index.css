@@ -1,0 +1,228 @@
+@import "tailwindcss";
+@import "driver.js/dist/driver.css";
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  
+  --color-hf-forest: #183d2d;
+  --color-hf-forest-dark: #0f281d;
+  --color-hf-forest-light: #245741;
+  --color-hf-cream: #f5f0e8;
+  --color-hf-cream-dark: #ede8df;
+  --color-hf-cream-card: #faf8f5;
+  --color-hf-red: #c0392b;
+  --color-hf-red-light: #e74c3c;
+  --color-hf-ink: #1d1d1b;
+  --color-hf-border: #1a1a1a;
+  --color-hf-muted: #575753;
+}
+
+@layer base {
+  * {
+    border-color: #1a1a1a;
+  }
+  
+  body {
+    background-color: #f5f0e8;
+    color: #1d1d1b;
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Neo-brutalist Utility Classes */
+.brutal-card {
+  background-color: #ffffff;
+  border: 2px solid #1a1a1a;
+  border-radius: 12px;
+  box-shadow: 4px 4px 0px #1a1a1a;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brutal-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #1a1a1a;
+}
+
+.brutal-card-cream {
+  background-color: #ede8df;
+  border: 2px solid #1a1a1a;
+  border-radius: 12px;
+  box-shadow: 4px 4px 0px #1a1a1a;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brutal-btn-primary {
+  background-color: #183d2d;
+  color: #f5f0e8;
+  border: 2px solid #1a1a1a;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0px #1a1a1a;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.brutal-btn-primary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0px #1a1a1a;
+  background-color: #245741;
+}
+
+.brutal-btn-primary:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #1a1a1a;
+}
+
+.brutal-btn-secondary {
+  background-color: #ffffff;
+  color: #1d1d1b;
+  border: 2px solid #1a1a1a;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0px #1a1a1a;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.brutal-btn-secondary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0px #1a1a1a;
+  background-color: #ede8df;
+}
+
+.brutal-btn-secondary:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #1a1a1a;
+}
+
+.brutal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1.5px solid #1a1a1a;
+  border-radius: 6px;
+  box-shadow: 2px 2px 0px #1a1a1a;
+}
+
+/* Custom ShareX Marquee Animation */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Custom Driver.js ShareX Theme overrides */
+.driver-popover.cc-tour {
+  font-family: 'JetBrains Mono', monospace !important;
+  color: #1a1a1a !important;
+  background: #ffffff !important;
+  border: 2px solid #1a1a1a !important;
+  border-radius: 12px !important;
+  max-width: 360px !important;
+  box-shadow: 5px 5px 0px #1a1a1a !important;
+  padding: 18px !important;
+}
+
+.driver-popover.cc-tour .driver-popover-title {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #183d2d !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.driver-popover.cc-tour .driver-popover-description {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 13.5px !important;
+  line-height: 1.55 !important;
+  color: #333333 !important;
+  margin-top: 8px !important;
+}
+
+.driver-popover.cc-tour .driver-popover-progress-text {
+  font-family: 'JetBrains Mono', monospace !important;
+  color: #666666 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.driver-popover.cc-tour .driver-popover-footer {
+  margin-top: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.driver-popover.cc-tour .driver-popover-footer button {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  border: 2px solid #1a1a1a !important;
+  border-radius: 6px !important;
+  padding: 6px 14px !important;
+  box-shadow: 2px 2px 0px #1a1a1a !important;
+  cursor: pointer !important;
+  transition: all 0.1s ease !important;
+}
+
+.driver-popover.cc-tour .driver-popover-footer button:hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0px #1a1a1a !important;
+}
+
+.driver-popover.cc-tour .driver-popover-footer .driver-popover-next-btn {
+  background: #183d2d !important;
+  color: #ffffff !important;
+}
+
+.driver-popover.cc-tour .driver-popover-footer .driver-popover-prev-btn {
+  background: #f5f0e8 !important;
+  color: #1a1a1a !important;
+}
+
+.driver-popover.cc-tour .driver-popover-close-btn {
+  color: #1a1a1a !important;
+}
+
+[data-tour] {
+  scroll-margin-top: 90px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #ede8df;
+}
+::-webkit-scrollbar-thumb {
+  background: #183d2d;
+  border-radius: 4px;
+  border: 1px solid #1a1a1a;
+}
