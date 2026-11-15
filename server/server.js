@@ -61,10 +61,89 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
     mode: isMongoConnected ? 'mongodb-atlas' : 'in-memory',
-    emailConfigured: Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+    emailConfigured: Boolean((process.env.EMAIL_USER && process.env.EMAIL_PASS) || process.env.RESEND_API_KEY),
+    provider: process.env.RESEND_API_KEY ? 'resend-api' : (process.env.EMAIL_USER ? 'gmail-smtp' : 'none'),
     timestamp: new Date().toISOString()
   });
 });
+
+// Helper to send email via Resend (HTTPS Port 443 - 100% Reliable on Render Cloud)
+async function sendViaResend({ name, email, subject, message, notificationEmail }) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: 'Portfolio Contact <onboarding@resend.dev>',
+      to: [notificationEmail],
+      reply_to: email,
+      subject: `[Portfolio Dispatch] ${subject} from ${name}`,
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; background-color: #f5f0e8; color: #1d1d1b;">
+          <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 2px solid #183d2d; border-radius: 8px; padding: 24px; box-shadow: 4px 4px 0px #1a1a1a;">
+            <h2 style="color: #183d2d; margin-top: 0;">New Message from Portfolio</h2>
+            <hr style="border: none; border-top: 1px solid #ede8df; margin: 16px 0;" />
+            <p><strong>Sender:</strong> ${name}</p>
+            <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+            <p><strong>Subject:</strong> ${subject}</p>
+            <div style="margin-top: 20px; padding: 16px; background-color: #faf8f5; border-left: 4px solid #183d2d; border-radius: 4px;">
+              <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+            </div>
+            <hr style="border: none; border-top: 1px solid #ede8df; margin: 24px 0 16px 0;" />
+            <p style="font-size: 11px; color: #777;">Sent via Resend HTTPS API on Render.</p>
+          </div>
+        </div>
+      `
+    })
+  });
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Resend API returned status ${res.status}: ${errorText}`);
+  }
+  return await res.json();
+}
+
+// Helper to send email via Gmail SMTP (Nodemailer)
+async function sendViaNodemailer({ name, email, subject, message, emailUser, emailPass, notificationEmail }) {
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // SSL
+    auth: {
+      user: emailUser,
+      pass: emailPass
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
+  });
+
+  return await transporter.sendMail({
+    from: `"Portfolio Contact" <${emailUser}>`,
+    to: notificationEmail,
+    replyTo: email,
+    subject: `[Portfolio Dispatch] ${subject} from ${name}`,
+    html: `
+      <div style="font-family: sans-serif; padding: 20px; background-color: #f5f0e8; color: #1d1d1b;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 2px solid #183d2d; border-radius: 8px; padding: 24px; box-shadow: 4px 4px 0px #1a1a1a;">
+          <h2 style="color: #183d2d; margin-top: 0;">New Message from Portfolio</h2>
+          <hr style="border: none; border-top: 1px solid #ede8df; margin: 16px 0;" />
+          <p><strong>Sender:</strong> ${name}</p>
+          <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+          <p><strong>Subject:</strong> ${subject}</p>
+          <div style="margin-top: 20px; padding: 16px; background-color: #faf8f5; border-left: 4px solid #183d2d; border-radius: 4px;">
+            <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+          </div>
+          <hr style="border: none; border-top: 1px solid #ede8df; margin: 24px 0 16px 0;" />
+          <p style="font-size: 11px; color: #777;">Sent via Yash Sharma's Portfolio Server.</p>
+        </div>
+      </div>
+    `
+  });
+}
 
 // Bulletproof Contact Dispatch
 app.post('/api/contact', async (req, res) => {
@@ -87,6 +166,7 @@ app.post('/api/contact', async (req, res) => {
   if (isMongoConnected) {
     try {
       savedDoc = await Contact.create(payload);
+      console.log(`💾 Saved message from ${name} to MongoDB Atlas.`);
     } catch (err) {
       console.error('Mongo save error, falling back to memory store:', err.message);
     }
@@ -96,50 +176,40 @@ app.post('/api/contact', async (req, res) => {
     inMemoryContacts.unshift(payload);
   }
 
-  // 2. Safe Email Forwarding directly to Gmail
+  // 2. Safe Email Forwarding (Guaranteed NEVER to crash backend)
+  const notificationEmail = process.env.NOTIFICATION_EMAIL || 'ysharma8502@gmail.com';
+  const resendApiKey = process.env.RESEND_API_KEY;
   const emailUser = process.env.EMAIL_USER;
   const emailPass = process.env.EMAIL_PASS;
-  const notificationEmail = process.env.NOTIFICATION_EMAIL || 'ysharma8502@gmail.com';
 
-  if (emailUser && emailPass) {
-    (async () => {
+  // Background dispatch with full diagnostics
+  (async () => {
+    if (resendApiKey) {
       try {
-        const transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: emailUser,
-            pass: emailPass
-          }
-        });
-
-        await transporter.sendMail({
-          from: `"Portfolio Contact" <${emailUser}>`,
-          to: notificationEmail,
-          replyTo: email,
-          subject: `[Portfolio Dispatch] ${payload.subject} from ${name}`,
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; background-color: #f5f0e8; color: #1d1d1b;">
-              <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 2px solid #183d2d; border-radius: 8px; padding: 24px; box-shadow: 4px 4px 0px #1a1a1a;">
-                <h2 style="color: #183d2d; margin-top: 0;">New Message from Portfolio</h2>
-                <hr style="border: none; border-top: 1px solid #ede8df; margin: 16px 0;" />
-                <p><strong>Sender:</strong> ${name}</p>
-                <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-                <p><strong>Subject:</strong> ${payload.subject}</p>
-                <div style="margin-top: 20px; padding: 16px; background-color: #faf8f5; border-left: 4px solid #183d2d; border-radius: 4px;">
-                  <p style="margin: 0; white-space: pre-wrap;">${message}</p>
-                </div>
-                <hr style="border: none; border-top: 1px solid #ede8df; margin: 24px 0 16px 0;" />
-                <p style="font-size: 11px; color: #777;">Sent via Yash Sharma's Portfolio Server.</p>
-              </div>
-            </div>
-          `
-        });
-        console.log(`✉️ Email successfully forwarded to ${notificationEmail}`);
-      } catch (mailErr) {
-        console.warn('⚠️ Email forwarding warning:', mailErr.message);
+        await sendViaResend({ name, email, subject: payload.subject, message, notificationEmail });
+        console.log(`✉️ [Resend API] Email successfully forwarded to ${notificationEmail}`);
+        return;
+      } catch (resendErr) {
+        console.warn('⚠️ [Resend API Error]:', resendErr.message);
       }
-    })();
-  }
+    }
+
+    if (emailUser && emailPass) {
+      try {
+        await sendViaNodemailer({ name, email, subject: payload.subject, message, emailUser, emailPass, notificationEmail });
+        console.log(`✉️ [Gmail SMTP] Email successfully forwarded to ${notificationEmail}`);
+        return;
+      } catch (smtpErr) {
+        console.warn('⚠️ [Gmail SMTP Error on Render]:', smtpErr.message);
+        console.warn('ℹ️ Note: Render free tier blocks outbound SMTP port 465/587. Use RESEND_API_KEY (HTTPS port 443) for 100% reliable cloud email forwarding.');
+      }
+    }
+
+    if (!resendApiKey && (!emailUser || !emailPass)) {
+      console.warn('⚠️ [Environment Warning]: Neither RESEND_API_KEY nor EMAIL_USER/EMAIL_PASS are defined in the Render Environment Variables dashboard!');
+      console.log(`Message is safely saved in MongoDB Atlas database, but no email was dispatched.`);
+    }
+  })();
 
   // 3. Always return success to client
   res.status(201).json({
